@@ -69,11 +69,11 @@ const playSound = (type: 'correct' | 'wrong' | 'levelup' | 'achievement') => {
 
 // --- DATA: CATEGORIES ---
 const CATEGORY_GROUPS = [
-  { id: 'sci_math', name: 'Science & Maths', icon: <BookOpen className="w-6 h-6"/>, topics: ['Physics', 'Chemistry', 'Maths', 'Biology', 'Data Science'] },
+  { id: 'sci_math', name: 'Science & Maths', icon: <BookOpen className="w-6 h-6"/>, topics: ['JEE', 'NEET', 'Physics', 'Chemistry', 'Maths', 'Biology', 'Data Science'] },
   { id: 'tech_eng', name: 'Tech & Engineering', icon: <Cpu className="w-6 h-6"/>, topics: ['Engineering', 'Architecture', 'Programming', 'Software Engineer', 'Web Developer', 'AI', 'Hacker (ethical)'] },
   { id: 'medical', name: 'Health & Medical', icon: <Stethoscope className="w-6 h-6"/>, topics: ['Doctor', 'Pharmacy', 'Nursing', 'Biotech', 'Lab Technician', 'Radiology', 'Physiotherapy', 'Hospital jobs'] },
   { id: 'business', name: 'Commerce & Law', icon: <Briefcase className="w-6 h-6"/>, topics: ['Accountancy', 'Business', 'Economics', 'CA', 'CS', 'B.Com', 'MBA', 'Banking', 'Lawyer'] },
-  { id: 'humanities', name: 'Humanities & Govt', icon: <Building className="w-6 h-6"/>, topics: ['History', 'Geography', 'Political Science', 'UPSC', 'NDA', 'Teacher', 'Journalist'] },
+  { id: 'humanities', name: 'Humanities & Govt', icon: <Building className="w-6 h-6"/>, topics: ['History', 'Geography', 'Political Science', 'Indian Constitution', 'Preamble of the Constitution', 'Parts of the Constitution', 'Schedules of the Constitution', 'Amendments of the Constitution', 'Indian Penal Code', 'UPSC', 'NDA', 'Teacher', 'Journalist'] },
   { id: 'vocational', name: 'Vocational & Trades', icon: <Wrench className="w-6 h-6"/>, topics: ['Engineering diploma', 'Junior Engineer', 'Electrician', 'Fitter', 'Mechanic', 'Skilled jobs'] },
   { id: 'agriculture', name: 'Agriculture', icon: <Sprout className="w-6 h-6"/>, topics: ['Farming science', 'Agriculture tech', 'Agriculture officer', 'Scientist'] },
   { id: 'lifestyle', name: 'Lifestyle & Arts', icon: <Star className="w-6 h-6"/>, topics: ['Fashion', 'Hotel management', 'Beauty', 'Animation'] }
@@ -86,14 +86,14 @@ export default function App() {
   const [language, setLanguage] = useState('en');
   const [selectedTopic, setSelectedTopic] = useState('');
   const [gameMode, setGameMode] = useState<'quiz' | 'study'>('quiz');
-  const [difficulty, setDifficulty] = useState<'easy' | 'hard' | 'advance'>('easy');
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
   const [quizTimer, setQuizTimer] = useState(30);
   const [speechVoice, setSpeechVoice] = useState<'male' | 'female'>('female');
   const [speechRate, setSpeechRate] = useState(1.0);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [userStats, setUserStats] = useState<any>({
     topics: {},
-    difficulties: { easy: { correct: 0, total: 0 }, hard: { correct: 0, total: 0 }, advance: { correct: 0, total: 0 } },
+    difficulties: { easy: { correct: 0, total: 0 }, medium: { correct: 0, total: 0 }, hard: { correct: 0, total: 0 } },
     masteryBadges: []
   });
   const [toast, setToast] = useState<{message: string, type: string} | null>(null);
@@ -464,6 +464,7 @@ function QuizScreen({ topic, lang, setView, addXp, setCoins, streak, setStreak, 
   const [error, setError] = useState(false);
   const [cachedAudio, setCachedAudio] = useState<{ [key: string]: string | null }>({ all: null, explanation: null });
   const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const previousQuestions = useRef<string[]>([]);
   
   const isMounted = useRef(true);
 
@@ -475,7 +476,7 @@ function QuizScreen({ topic, lang, setView, addXp, setCoins, streak, setStreak, 
     const ePrefix = l === 'hi' ? 'व्याख्या: ' : 'Explanation: ';
 
     let text = `${qPrefix}${data.questionText}. `;
-    text += `${oPrefix}${data.options.map((opt: string, i: number) => `${l === 'hi' ? 'विकल्प' : 'Option'} ${i + 1}: ${opt}`).join('. ')}. `;
+    text += `${oPrefix}${data.options?.map((opt: string, i: number) => `${l === 'hi' ? 'विकल्प' : 'Option'} ${i + 1}: ${opt}`).join('. ') || ''}. `;
     
     if (answered) {
       text += `${aPrefix}${data.options[data.correctIndex]}. `;
@@ -526,9 +527,10 @@ function QuizScreen({ topic, lang, setView, addXp, setCoins, streak, setStreak, 
     setCachedAudio({ all: null, explanation: null });
     
     try {
-      const data = await generateQuizQuestion(topic, lang, level, gameMode, difficulty);
+      const data = await generateQuizQuestion(topic, lang, level, gameMode, difficulty, previousQuestions.current);
       if (isMounted.current) {
         setQuestionData(data);
+        previousQuestions.current = [...previousQuestions.current.slice(-10), data.questionText];
         setTimeLeft(quizTimer);
         setLoading(false);
         // Prefetch "Read All" audio (without explanation)
@@ -790,7 +792,7 @@ function QuizScreen({ topic, lang, setView, addXp, setCoins, streak, setStreak, 
         </div>
 
         <div className="grid gap-4">
-          {questionData.options.map((option: string, idx: number) => {
+          {questionData.options?.map((option: string, idx: number) => {
             let state = 'default';
             if (isAnswered) {
               if (idx === questionData.correctIndex) state = 'correct';
@@ -1135,7 +1137,7 @@ function ProfileScreen({ setView, user, setUser, level, coins, xp, showToast, un
                       <div className="h-48 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart 
-                            data={Object.entries(userStats.topics).map(([name, s]: any) => ({
+                            data={Object.entries(userStats.topics || {}).map(([name, s]: any) => ({
                               name: name.length > 10 ? name.substring(0, 10) + '...' : name,
                               accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0
                             })).sort((a, b) => b.accuracy - a.accuracy).slice(0, 5)} 
@@ -1159,7 +1161,7 @@ function ProfileScreen({ setView, user, setUser, level, coins, xp, showToast, un
                       <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Difficulty Mastery</h4>
                       <div className="h-64 w-full flex justify-center">
                         <ResponsiveContainer width="100%" height="100%">
-                          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={Object.entries(userStats.difficulties).map(([name, s]: any) => ({
+                          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={Object.entries(userStats.difficulties || {}).map(([name, s]: any) => ({
                             subject: name.charAt(0).toUpperCase() + name.slice(1),
                             accuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0
                           }))}>
@@ -1240,7 +1242,7 @@ function ProfileScreen({ setView, user, setUser, level, coins, xp, showToast, un
                 <span className="font-bold">Difficulty Level</span>
               </div>
               <div className="flex bg-slate-800 p-1 rounded-full border border-slate-700">
-                {(['easy', 'hard', 'advance'] as const).map((d) => (
+                {(['easy', 'medium', 'hard'] as const).map((d) => (
                   <button 
                     key={d}
                     onClick={() => setDifficulty(d)}
@@ -1406,7 +1408,7 @@ function ProfileScreen({ setView, user, setUser, level, coins, xp, showToast, un
               <span className="font-bold">Mastery Badges</span>
               {userStats.masteryBadges?.length > 0 && (
                 <span className="bg-emerald-500 text-white text-[10px] px-2 py-0.5 rounded-full">
-                  {userStats.masteryBadges.length}
+                  {userStats.masteryBadges?.length}
                 </span>
               )}
             </div>
@@ -1428,7 +1430,7 @@ function ProfileScreen({ setView, user, setUser, level, coins, xp, showToast, un
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-3">
-                    {userStats.masteryBadges.map((topic: string) => (
+                    {userStats.masteryBadges?.map((topic: string) => (
                       <div 
                         key={topic}
                         className="flex items-center gap-4 p-4 bg-emerald-900/10 border border-emerald-500/30 rounded-2xl"

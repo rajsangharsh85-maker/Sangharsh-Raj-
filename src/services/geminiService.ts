@@ -22,11 +22,13 @@ function createWavHeader(dataLength: number, sampleRate: number = 24000) {
   return header;
 }
 
-export const generateQuizQuestion = async (topic: string, lang: string, level: number, mode: 'quiz' | 'study' = 'quiz', difficulty: 'easy' | 'hard' | 'advance' = 'easy') => {
+export const generateQuizQuestion = async (topic: string, lang: string, level: number, mode: 'quiz' | 'study' = 'quiz', difficulty: 'easy' | 'medium' | 'hard' = 'easy', previousQuestions: string[] = []) => {
   const languageText = lang === 'hi' ? 'Hindi' : 'English';
+  const avoidList = previousQuestions.length > 0 ? `DO NOT repeat or generate any question similar to these: ${previousQuestions.join('; ')}.` : '';
+  
   const prompt = mode === 'quiz' 
-    ? `Generate a tricky, conceptual multiple-choice question for a competitive exam about "${topic}". Difficulty level: ${difficulty} (User Level ${level}/10). Language: ${languageText}. Make options plausible. Ensure it is completely unique. Return the response in JSON format.`
-    : `Generate a comprehensive educational multiple-choice question for learning about "${topic}". Focus on explaining a key concept at a ${difficulty} difficulty level. The explanation must be very detailed, covering the 'why' and 'how'. Language: ${languageText}. Return the response in JSON format.`;
+    ? `Generate a tricky, conceptual multiple-choice question for a competitive exam about "${topic}". Difficulty level: ${difficulty} (User Level ${level}/10). Language: ${languageText}. Make options plausible. Ensure it is completely unique. ${avoidList} Return the response in JSON format.`
+    : `Generate a comprehensive educational multiple-choice question for learning about "${topic}". Focus on explaining a key concept at a ${difficulty} difficulty level. The explanation must be very detailed, covering the 'why' and 'how'. Language: ${languageText}. ${avoidList} Return the response in JSON format.`;
 
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
